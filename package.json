@@ -1,0 +1,31 @@
+{
+  "name": "bitirme-backend-proje",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omerkilincoglu/bitirme-backend-proje.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/omerkilincoglu/bitirme-backend-proje/issues"
+  },
+  "homepage": "https://github.com/omerkilincoglu/bitirme-backend-proje#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "D": "^1.0.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "prisma": "^6.7.0",
+    "validator": "^13.15.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Kullanici {
+  id              Int           @id @default(autoincrement())
+  kullaniciAdi    String        @unique
+  eposta          String        @unique
+  sifre           String
+  urunler         Urun[]        @relation("Satici")
+  aldigimUrunler  Satilan[]     @relation("Alici")
+  satisTalepleri  SatisTalebi[] @relation("AliciTalep")
+  favoriler       Favori[]
+  aliciSohbetler  Sohbet[]      @relation("AliciSohbet")
+  saticiSohbetler Sohbet[]      @relation("SaticiSohbet")
+  mesajlar        Mesaj[]
+  bildirimler     Bildirim[]
+}
+
+model Urun {
+  id        Int           @id @default(autoincrement())
+  baslik    String
+  aciklama  String
+  resim     String?
+  konum     Json
+  fiyat     Float
+  kategori  String
+  durum     String // "AzKullanilmis" veya "CokKullanilmis"
+  satici    Kullanici     @relation("Satici", fields: [saticiId], references: [id])
+  saticiId  Int
+  satildi   Boolean       @default(false)
+  satilan   Satilan?
+  talepler  SatisTalebi[] @relation("UrunTalep")
+  favoriler Favori[]
+  sohbetler Sohbet[]
+}
+
+model Satilan {
+  id      Int       @id @default(autoincrement())
+  tarih   DateTime  @default(now())
+  urun    Urun      @relation(fields: [urunId], references: [id])
+  urunId  Int       @unique
+  alici   Kullanici @relation("Alici", fields: [aliciId], references: [id])
+  aliciId Int
+}
+
+model SatisTalebi {
+  id    Int      @id @default(autoincrement())
+  mesaj String
+  tarih DateTime @default(now())
+  durum String   @default("BEKLIYOR") // BEKLIYOR | ONAYLANDI | REDDEDILDI
+
+  urun   Urun @relation("UrunTalep", fields: [urunId], references: [id])
+  urunId Int
+
+  alici   Kullanici @relation("AliciTalep", fields: [aliciId], references: [id])
+  aliciId Int
+}
+
+model Favori {
+  id          Int       @id @default(autoincrement())
+  kullanici   Kullanici @relation(fields: [kullaniciId], references: [id])
+  kullaniciId Int
+  urun        Urun      @relation(fields: [urunId], references: [id])
+  urunId      Int
+}
+
+model Sohbet {
+  id       Int       @id @default(autoincrement())
+  alici    Kullanici @relation("AliciSohbet", fields: [aliciId], references: [id])
+  aliciId  Int
+  satici   Kullanici @relation("SaticiSohbet", fields: [saticiId], references: [id])
+  saticiId Int
+  mesajlar Mesaj[]
+  urun     Urun      @relation(fields: [urunId], references: [id])
+  urunId   Int
+}
+
+model Mesaj {
+  id          Int       @id @default(autoincrement())
+  zaman       DateTime  @default(now())
+  mesaj       String
+  sohbet      Sohbet    @relation(fields: [sohbetId], references: [id])
+  sohbetId    Int
+  gonderici   Kullanici @relation(fields: [gondericiId], references: [id])
+  gondericiId Int
+}
+
+model Bildirim {
+  id        Int       @id @default(autoincrement())
+  mesaj     String
+  hedefId   Int
+  kullanici Kullanici @relation(fields: [hedefId], references: [id])
+  zaman     DateTime  @default(now())
+  okundu    Boolean   @default(false)
+}

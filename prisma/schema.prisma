@@ -30,14 +30,16 @@ model Urun {
   konum     Json
   fiyat     Float
   kategori  String
-  durum     String // "AzKullanilmis" veya "CokKullanilmis"
+  durum     String // "AzKullanilmis" veya "Yeni"
   satici    Kullanici     @relation("Satici", fields: [saticiId], references: [id])
   saticiId  Int
-  satildi   Boolean       @default(false)
+  satildi   Boolean       @default(false) //satılan Durum
+  silindi   Boolean       @default(false)
   satilan   Satilan?
   talepler  SatisTalebi[] @relation("UrunTalep")
   favoriler Favori[]
   sohbetler Sohbet[]
+  Mesaj     Mesaj[]
 }
 
 model Satilan {
@@ -46,19 +48,6 @@ model Satilan {
   urun    Urun      @relation(fields: [urunId], references: [id])
   urunId  Int       @unique
   alici   Kullanici @relation("Alici", fields: [aliciId], references: [id])
-  aliciId Int
-}
-
-model SatisTalebi {
-  id    Int      @id @default(autoincrement())
-  mesaj String
-  tarih DateTime @default(now())
-  durum String   @default("BEKLIYOR") // BEKLIYOR | ONAYLANDI | REDDEDILDI
-
-  urun   Urun @relation("UrunTalep", fields: [urunId], references: [id])
-  urunId Int
-
-  alici   Kullanici @relation("AliciTalep", fields: [aliciId], references: [id])
   aliciId Int
 }
 
@@ -87,8 +76,11 @@ model Mesaj {
   mesaj       String
   sohbet      Sohbet    @relation(fields: [sohbetId], references: [id])
   sohbetId    Int
+  okundu      Boolean   @default(false)
   gonderici   Kullanici @relation(fields: [gondericiId], references: [id])
   gondericiId Int
+  urun        Urun?     @relation(fields: [urunId], references: [id])
+  urunId      Int?
 }
 
 model Bildirim {
@@ -98,4 +90,24 @@ model Bildirim {
   kullanici Kullanici @relation(fields: [hedefId], references: [id])
   zaman     DateTime  @default(now())
   okundu    Boolean   @default(false)
+}
+
+enum TalepDurumu {
+  BEKLIYOR
+  ONAYLANDI
+  REDDEDILDI
+}
+
+model SatisTalebi {
+  id    Int         @id @default(autoincrement())
+  mesaj String
+  tarih DateTime    @default(now())
+  durum TalepDurumu @default(BEKLIYOR)
+
+  urun   Urun @relation("UrunTalep", fields: [urunId], references: [id])
+  urunId Int
+
+  alici   Kullanici @relation("AliciTalep", fields: [aliciId], references: [id])
+  aliciId Int
+
 }

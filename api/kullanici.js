@@ -229,6 +229,51 @@ router.put("/eposta", authMiddleware, async (req, res, next) => {
   }
 });
 
+// KULLANICI ADI GÜNCELLEME
+router.put("/kullanici-adi", authMiddleware, async (req, res, next) => {
+  try {
+    const { kullaniciAdiYeni, sifre } = req.body;
+    const kullanici = req.kullanici;
+
+    // Zorunlu alan kontrolü
+    if (!kullaniciAdiYeni || !sifre) {
+      throw new ApiError("Kullanıcı adı ve şifre zorunludur", 400);
+    }
+
+    // Şifre doğru mu?
+    const sifreDogruMu = await bcrypt.compare(sifre, kullanici.sifre);
+    if (!sifreDogruMu) {
+      throw new ApiError("Şifre hatalı", 401);
+    }
+
+    // Aynı kullanıcı adı varsa reddet
+    const kullaniciAdiKullanimdaMi = await prisma.kullanici.findFirst({
+      where: { kullaniciAdi: kullaniciAdiYeni },
+    });
+
+    if (
+      kullaniciAdiKullanimdaMi &&
+      kullaniciAdiKullanimdaMi.id !== kullanici.id
+    ) {
+      throw new ApiError("Bu kullanıcı adı zaten kullanılıyor", 409);
+    }
+
+    // Güncelle
+    await prisma.kullanici.update({
+      where: { id: kullanici.id },
+      data: { kullaniciAdi: kullaniciAdiYeni },
+    });
+
+    res.status(200).json({
+      basarili: true,
+      mesaj: "Kullanıcı adı başarıyla güncellendi",
+    });
+  } catch (hata) {
+    next(hata);
+  }
+});
+
+
 // Hata işleme middleware'i
 router.use((err, req, res, next) => {
   console.error(err);

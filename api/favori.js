@@ -39,56 +39,56 @@ router.post("/", authMiddleware, async (req, res, next) => {
 
 // 📃 Kullanıcının favori ürünlerini listele
 router.get("/", authMiddleware, async (req, res, next) => {
-    try {
-      const favoriler = await prisma.favori.findMany({
-        where: {
-          kullaniciId: req.kullanici.id,
+  try {
+    const favoriler = await prisma.favori.findMany({
+      where: {
+        kullaniciId: req.kullanici.id,
+      },
+      include: {
+        urun: {
+          include: {
+            satici: {
+              select: {
+                kullaniciAdi: true,
+              },
+            },
+          },
         },
-        include: {
-          urun: {
-            include: {
-              satici: {
-                select: {
-                  kullaniciAdi: true,
-                }
-              }
-            }
-          }
-        },
-        orderBy: {
-          id: "desc"
-        }
-      });
-  
-      res.status(200).json({ favoriler });
-    } catch (hata) {
-      next(hata);
-    }
-  });
-  
-  // ❌ Favori silme
+      },
+      orderBy: {
+        id: "desc",
+      },
+    });
+
+    res.status(200).json({ favoriler });
+  } catch (hata) {
+    next(hata);
+  }
+});
+
+// ❌ Favori silme
 router.delete("/:id", authMiddleware, async (req, res, next) => {
-    try {
-      const favoriId = parseInt(req.params.id);
-      const kullaniciId = req.kullanici.id;
-  
-      const favori = await prisma.favori.findUnique({
-        where: { id: favoriId }
-      });
-  
-      if (!favori) throw new ApiError("Favori bulunamadı.", 404);
-      if (favori.kullaniciId !== kullaniciId) {
-        throw new ApiError("Bu favoriyi silmeye yetkiniz yok.", 403);
-      }
-  
-      await prisma.favori.delete({
-        where: { id: favoriId }
-      });
-  
-      res.status(200).json({ mesaj: "Favoriden kaldırıldı ✅" });
-    } catch (hata) {
-      next(hata);
+  try {
+    const favoriId = parseInt(req.params.id);
+    const kullaniciId = req.kullanici.id;
+
+    const favori = await prisma.favori.findUnique({
+      where: { id: favoriId },
+    });
+
+    if (!favori) throw new ApiError("Favori bulunamadı.", 404);
+    if (favori.kullaniciId !== kullaniciId) {
+      throw new ApiError("Bu favoriyi silmeye yetkiniz yok.", 403);
     }
-  });
-  
+
+    await prisma.favori.delete({
+      where: { id: favoriId },
+    });
+
+    res.status(200).json({ mesaj: "Favoriden kaldırıldı ✅" });
+  } catch (hata) {
+    next(hata);
+  }
+});
+
 module.exports = router;

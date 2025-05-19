@@ -24,22 +24,34 @@ router.post(
   async (req, res, next) => {
     console.log("resim yüklendi:", req.file);
     try {
-      const { baslik, aciklama, fiyat, kategori, durum, konum } = req.body;
-      if (!baslik || !aciklama || !fiyat || !kategori || !durum || !konum) {
+      const { baslik, aciklama, fiyat, kategori, durum, konum, detayliKonum } =
+        req.body;
+
+      // ✅ Zorunlu alan kontrolü
+      if (
+        !baslik ||
+        !aciklama ||
+        !fiyat ||
+        !kategori ||
+        !durum ||
+        !konum ||
+        !detayliKonum
+      ) {
         if (req.file) deleteImage(req.file.filename);
-        throw new ApiError("Tüm zorunlu alanları doldurun.", 400);
+        throw new ApiError("Tüm alanlar zorunludur.", 400);
       }
 
-      // Sadece iki durum kabul edilir
+      // ✅ Durum geçerliliği
       const gecerliDurumlar = ["azkullanılmış", "yeni"];
       if (!gecerliDurumlar.includes(durum.toLowerCase())) {
         if (req.file) deleteImage(req.file.filename);
         throw new ApiError(
-          "Durum sadece 'azkullanılmış' veya 'yeni' olabilir",
+          "Durum sadece 'azkullanılmış' veya 'yeni' olabilir.",
           422
         );
       }
 
+      // ✅ Fiyat doğrulama
       const fiyatStr = fiyat.replace(",", ".");
       const fiyatFloat = parseFloat(fiyatStr);
       if (isNaN(fiyatFloat) || !/^\d+(\.\d{1,2})?$/.test(fiyatStr)) {
@@ -47,6 +59,7 @@ router.post(
         throw new ApiError("Fiyat geçerli değil. Örnek: 199.99", 422);
       }
 
+      // ✅ Konum doğrulama ve parse
       let konumParsed;
       try {
         konumParsed = JSON.parse(konum);
@@ -60,6 +73,10 @@ router.post(
         );
       }
 
+      // ✅ Tam adres oluştur
+      const tamAdres = `${konumParsed.ulke} / ${konumParsed.il} / ${konumParsed.ilce} - ${detayliKonum}`;
+
+      // ✅ Ürünü kaydet
       const yeniUrun = await prisma.urun.create({
         data: {
           baslik,
@@ -71,9 +88,12 @@ router.post(
           resim: req.file.filename,
           saticiId: req.kullanici.id,
           satildi: false,
+          zaman: new Date(),
+          tamAdres,
         },
       });
 
+      // ✅ Başarılı yanıt
       res.status(201).json({
         basarili: true,
         mesaj: "Ürün başarıyla eklendi ✅",
@@ -81,7 +101,7 @@ router.post(
       });
     } catch (err) {
       if (req.file) {
-        deleteImage(req.file.filename); // Hata durumunda resmi sil
+        deleteImage(req.file.filename); // hata varsa resmi sil
       }
       next(err);
     }

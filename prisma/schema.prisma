@@ -27,6 +27,8 @@ model Urun {
   baslik    String
   aciklama  String
   resim     String?
+  zaman     DateTime      @default(now()) // otomatik tarih+saat ✅
+  tamAdres  String? // örn: Türkiye / İstanbul / Kadıköy - Cadde X, No:10
   konum     Json
   fiyat     Float
   kategori  String

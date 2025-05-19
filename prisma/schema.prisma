@@ -84,18 +84,21 @@ model Mesaj {
 }
 
 model Bildirim {
-  id        Int       @id @default(autoincrement())
+  id        Int          @id @default(autoincrement())
   mesaj     String
   hedefId   Int
-  kullanici Kullanici @relation(fields: [hedefId], references: [id])
-  zaman     DateTime  @default(now())
-  okundu    Boolean   @default(false)
+  kullanici Kullanici    @relation(fields: [hedefId], references: [id])
+  zaman     DateTime     @default(now())
+  okundu    Boolean      @default(false)
+  tip       BildirimTipi @default(MESAJ)
 }
 
-enum TalepDurumu {
-  BEKLIYOR
-  ONAYLANDI
-  REDDEDILDI
+enum BildirimTipi {
+  TALEP_ONAY
+  TALEP_RED
+  TALEP_BILGI
+  URUN_SATILDI
+  MESAJ
 }
 
 model SatisTalebi {
@@ -109,5 +112,10 @@ model SatisTalebi {
 
   alici   Kullanici @relation("AliciTalep", fields: [aliciId], references: [id])
   aliciId Int
+}
 
+enum TalepDurumu {
+  BEKLIYOR
+  ONAYLANDI
+  REDDEDILDI
 }

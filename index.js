@@ -35,7 +35,6 @@ app.use("/api/satilan", satilanRouter);
 app.use("/api/bildirim", bildirimRouter);
 app.use("/api/talep", talepRouter);
 
-
 // Ana endpoint
 app.get("/", (req, res) => {
   res.send({ status: "API çalışıyor 🚀" });

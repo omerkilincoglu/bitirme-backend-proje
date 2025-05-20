@@ -19,15 +19,15 @@ router.use((req, res, next) => {
 // 📦 Ürün ekleme
 router.post(
   "/ekle",
-  upload.single("resim"),
+  upload.array("resimler", 6), // 🆕 çoklu fotoğraf desteği
   authMiddleware,
   async (req, res, next) => {
-    console.log("resim yüklendi:", req.file);
+    console.log("resimler yüklendi:", req.files);
     try {
       const { baslik, aciklama, fiyat, kategori, durum, konum, detayliKonum } =
         req.body;
 
-      // ✅ Zorunlu alan kontrolü
+      // Zorunlu alan kontrolü
       if (
         !baslik ||
         !aciklama ||
@@ -37,46 +37,51 @@ router.post(
         !konum ||
         !detayliKonum
       ) {
-        if (req.file) deleteImage(req.file.filename);
+        if (req.files) req.files.forEach((f) => deleteImage(f.filename));
         throw new ApiError("Tüm alanlar zorunludur.", 400);
       }
 
-      // ✅ Durum geçerliliği
+      // Durum kontrolü
       const gecerliDurumlar = ["azkullanılmış", "yeni"];
       if (!gecerliDurumlar.includes(durum.toLowerCase())) {
-        if (req.file) deleteImage(req.file.filename);
+        if (req.files) req.files.forEach((f) => deleteImage(f.filename));
         throw new ApiError(
           "Durum sadece 'azkullanılmış' veya 'yeni' olabilir.",
           422
         );
       }
 
-      // ✅ Fiyat doğrulama
+      // Fiyat kontrolü
       const fiyatStr = fiyat.replace(",", ".");
       const fiyatFloat = parseFloat(fiyatStr);
       if (isNaN(fiyatFloat) || !/^\d+(\.\d{1,2})?$/.test(fiyatStr)) {
-        if (req.file) deleteImage(req.file.filename);
+        if (req.files) req.files.forEach((f) => deleteImage(f.filename));
         throw new ApiError("Fiyat geçerli değil. Örnek: 199.99", 422);
       }
 
-      // ✅ Konum doğrulama ve parse
+      // Konum kontrolü
       let konumParsed;
       try {
         konumParsed = JSON.parse(konum);
         if (!konumParsed.il || !konumParsed.ilce || !konumParsed.ulke)
           throw new Error();
       } catch {
-        if (req.file) deleteImage(req.file.filename);
+        if (req.files) req.files.forEach((f) => deleteImage(f.filename));
         throw new ApiError(
           'Geçersiz konum. Örnek: {"il": "İstanbul", "ilce": "Kadıköy", "ulke": "Türkiye"}',
           422
         );
       }
 
-      // ✅ Tam adres oluştur
+      // Fotoğrafları işle
+      if (!req.files || req.files.length === 0) {
+        throw new ApiError("En az 1 fotoğraf yükleyin.", 400);
+      }
+
+      const resimAdlari = req.files.map((f) => f.filename);
       const tamAdres = `${konumParsed.ulke} / ${konumParsed.il} / ${konumParsed.ilce} - ${detayliKonum}`;
 
-      // ✅ Ürünü kaydet
+      // Ürünü kaydet
       const yeniUrun = await prisma.urun.create({
         data: {
           baslik,
@@ -85,7 +90,8 @@ router.post(
           kategori,
           durum,
           konum: konumParsed,
-          resim: req.file.filename,
+          resim: resimAdlari[0], // Kapak foto
+          resimler: resimAdlari, // Tüm fotoğraflar
           saticiId: req.kullanici.id,
           satildi: false,
           zaman: new Date(),
@@ -93,16 +99,13 @@ router.post(
         },
       });
 
-      // ✅ Başarılı yanıt
       res.status(201).json({
         basarili: true,
         mesaj: "Ürün başarıyla eklendi ✅",
         urun: yeniUrun,
       });
     } catch (err) {
-      if (req.file) {
-        deleteImage(req.file.filename); // hata varsa resmi sil
-      }
+      if (req.files) req.files.forEach((f) => deleteImage(f.filename));
       next(err);
     }
   }
@@ -294,77 +297,65 @@ router.delete("/:id", authMiddleware, async (req, res, next) => {
 // ✏️ Ürün güncelleme işlemi (Ürün satılmamış olmalı, resim güncellenebilir)
 router.put(
   "/:id",
-  upload.single("resim"),
+  upload.array("resimler", 6), // ✅ Çoklu resim
   authMiddleware,
   async (req, res, next) => {
     try {
       const urunId = parseInt(req.params.id);
 
-      // Ürün var mı kontrolü
+      // Ürün kontrolü
       const urun = await prisma.urun.findUnique({
         where: { id: urunId },
       });
 
-      // Ürün bulunamadıysa hata mesajı döndür
-      if (!urun) {
-        throw new ApiError("Ürün bulunamadı.", 404);
-      }
-
-      // Kullanıcı, ürünü satıyorsa güncellemeye yetkili
-      if (urun.saticiId !== req.kullanici.id) {
+      if (!urun) throw new ApiError("Ürün bulunamadı.", 404);
+      if (urun.saticiId !== req.kullanici.id)
         throw new ApiError("Bu ürünü güncellemeye yetkiniz yok.", 403);
-      }
-
-      // Satılmış ürün güncellenemez
-      if (urun.satildi) {
+      if (urun.satildi)
         throw new ApiError("Satılmış ürünler güncellenemez.", 400);
-      }
 
-      // Fiyat kontrolü (virgül/nokta ve 2 basamaklı ondalık kontrolü)
-      if (!req.body.fiyat) {
-        throw new ApiError("Fiyat alanı eksik.", 422);
-      }
-
+      // Fiyat
+      if (!req.body.fiyat) throw new ApiError("Fiyat eksik.", 422);
       let fiyatFormatted = req.body.fiyat.replace(",", ".");
-      if (!/^\d+(\.\d{1,2})?$/.test(fiyatFormatted)) {
-        throw new ApiError("Geçersiz fiyat formatı. Örnek: 199.99", 422);
-      }
+      if (!/^\d+(\.\d{1,2})?$/.test(fiyatFormatted))
+        throw new ApiError("Fiyat formatı geçersiz. Örnek: 199.99", 422);
 
-      // İki ondalık basamağa kadar yuvarlama
       fiyatFormatted = parseFloat(fiyatFormatted).toFixed(2);
 
-      // Konum formatı kontrolü (JSON)
+      // Konum
       let konumParsed;
       try {
         konumParsed = JSON.parse(req.body.konum);
-        if (!konumParsed.il || !konumParsed.ilce || !konumParsed.ulke) {
+        if (!konumParsed.il || !konumParsed.ilce || !konumParsed.ulke)
           throw new Error();
-        }
       } catch {
-        throw new ApiError(
-          'Geçersiz konum formatı. Örnek: {"il": "İstanbul", "ilce": "Kadıköy", "ulke": "Türkiye"}',
-          422
-        );
+        throw new ApiError("Geçersiz konum formatı", 422);
       }
 
-      // Resim dosyasını güncelleme (Yeni resim eklenmişse)
-      let resimAdi = urun.resim;
-      if (req.file) {
-        if (urun.resim) deleteImage(urun.resim);
-        resimAdi = req.file.filename;
+      const detayliKonum = req.body.detayliKonum || "";
+      const tamAdres = `${konumParsed.ulke} / ${konumParsed.il} / ${konumParsed.ilce} - ${detayliKonum}`;
+
+      // Resimler
+      let resimler = urun.resimler || [];
+      if (req.files && req.files.length > 0) {
+        // İsteğe bağlı: Eski fotoğrafları sil
+        if (resimler.length > 0) resimler.forEach((f) => deleteImage(f));
+
+        resimler = req.files.map((f) => f.filename);
       }
 
-      // Ürünü güncelleme işlemi
       const updatedUrun = await prisma.urun.update({
         where: { id: urunId },
         data: {
           baslik: req.body.baslik,
-          aciklama: req.body.aciklama || null,
+          aciklama: req.body.aciklama || "",
           fiyat: parseFloat(fiyatFormatted),
           kategori: req.body.kategori,
           durum: req.body.durum,
+          tamAdres, // ✅ sadece bu yeterli
           konum: konumParsed,
-          resim: resimAdi,
+          resim: resimler[0] || urun.resim,
+          resimler,
         },
       });
 
@@ -374,6 +365,8 @@ router.put(
         urun: updatedUrun,
       });
     } catch (err) {
+      console.error("Güncelleme hatası:", err);
+      if (req.files) req.files.forEach((f) => deleteImage(f.filename));
       next(err);
     }
   }

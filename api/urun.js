@@ -124,18 +124,26 @@ router.get("/", async (req, res, next) => {
     // Dinamik filtreleme
     if (arama) {
       const query = arama.toLowerCase();
-      filtre.OR = [
+
+      const orFilters = [
         { baslik: { contains: query, mode: "insensitive" } },
         { aciklama: { contains: query, mode: "insensitive" } },
         { kategori: { contains: query, mode: "insensitive" } },
         { durum: { contains: query, mode: "insensitive" } },
-        { fiyat: { equals: isNaN(query) ? undefined : parseFloat(query) } },
         {
           satici: {
             kullaniciAdi: { contains: query, mode: "insensitive" },
           },
         },
       ];
+
+      if (!isNaN(query)) {
+        orFilters.push({
+          fiyat: { equals: parseFloat(query) },
+        });
+      }
+
+      filtre.OR = orFilters;
     }
 
     if (kategori) filtre.kategori = kategori;

@@ -7,12 +7,12 @@ const deleteImage = (imageName) => {
   try {
     if (fs.existsSync(imageFullPath)) {
       fs.unlinkSync(imageFullPath);
-      console.log(`🗑️ Resim silindi: ${imageName}`);
+      // console.log(`🗑️ Resim silindi: ${imageName}`);
     } else {
-      console.warn(`⚠️ Silinecek resim bulunamadı: ${imageName}`);
+      // console.warn(`⚠️ Silinecek resim bulunamadı: ${imageName}`);
     }
   } catch (err) {
-    console.error(`❌ Resim silinirken hata oluştu (${imageName}):`, err.message);
+    // console.error(`❌ Resim silinirken hata oluştu (${imageName}):`, err.message);
   }
 };
 

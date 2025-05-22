@@ -87,13 +87,14 @@ model Mesaj {
 }
 
 model Bildirim {
-  id        Int          @id @default(autoincrement())
-  mesaj     String
-  hedefId   Int
-  kullanici Kullanici    @relation(fields: [hedefId], references: [id])
-  zaman     DateTime     @default(now())
-  okundu    Boolean      @default(false)
-  tip       BildirimTipi @default(MESAJ)
+  id         Int          @id @default(autoincrement())
+  mesaj      String
+  hedefId    Int
+  kullanici  Kullanici    @relation(fields: [hedefId], references: [id])
+  zaman      DateTime     @default(now())
+  okundu     Boolean      @default(false)
+  tip        BildirimTipi @default(MESAJ)
+  referansId Int?
 }
 
 enum BildirimTipi {

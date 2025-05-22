@@ -1,17 +1,17 @@
 // utils/notificationService.js
 const prisma = require("./prisma");
 
-const bildirimGonder = async (hedefId, mesaj) => {
+async function talepBildirimSil(talepId) {
   try {
-    await prisma.bildirim.create({
-      data: {
-        hedefId,
-        mesaj,
+    await prisma.bildirim.deleteMany({
+      where: {
+        tip: "TALEP_BILGI",
+        referansId: talepId,
       },
     });
   } catch (err) {
-    console.error("❗ Bildirim gönderilemedi:", err);
+    console.error("Bildirim silinemedi:", err.message);
   }
-};
+}
 
-module.exports = bildirimGonder;
+module.exports = { talepBildirimSil };

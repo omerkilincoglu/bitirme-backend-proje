@@ -4,6 +4,7 @@ const express = require("express");
 const prisma = require("../utils/prisma");
 const authMiddleware = require("../middlewares/authMiddleware");
 const ApiError = require("../utils/ApiError");
+const { talepBildirimSil } = require("../utils/notificationService");
 
 const router = express.Router();
 
@@ -43,6 +44,7 @@ router.post("/", authMiddleware, async (req, res, next) => {
         mesaj: `Yeni satın alma talebi aldınız. Ürün: ${urun.baslik}`,
         hedefId: urun.saticiId,
         tip: "TALEP_BILGI",
+        referansId: yeniTalep.id,
       },
     });
 
@@ -111,6 +113,8 @@ router.delete("/:urunId", authMiddleware, async (req, res, next) => {
 
     await prisma.satisTalebi.delete({ where: { id: talep.id } });
 
+    await talepBildirimSil(talep.id);
+
     res.status(200).json({ success: true, message: "Talep iptal edildi" });
   } catch (err) {
     next(err);
@@ -172,7 +176,7 @@ router.put("/onayla/:urunId", authMiddleware, async (req, res, next) => {
       },
     });
 
-    res.status(200).json({ success: true, message: "Talep onaylandı" });
+    res.status(200).json({ success: true, message: "Talep onaylandı ✅" });
   } catch (err) {
     next(err);
   }
@@ -210,7 +214,7 @@ router.put("/reddet/:urunId", authMiddleware, async (req, res, next) => {
       },
     });
 
-    res.status(200).json({ success: true, message: "Talep reddedildi" });
+    res.status(200).json({ success: true, message: "Talep reddedildi ❌" });
   } catch (err) {
     next(err);
   }
@@ -250,7 +254,10 @@ router.put("/iptal/:urunId", authMiddleware, async (req, res, next) => {
       },
     });
 
-    res.status(200).json({ success: true, message: "Satış iptal edildi" });
+    res.status(200).json({
+      success: true,
+      message: "🔄 Satış İptal, Ürün yeniden satışa çıktı!",
+    });
   } catch (err) {
     next(err);
   }

@@ -18,11 +18,14 @@ const talepRouter = require("./api/talep");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+<<<<<<< HEAD
 // app.use((req, res, next) => {
 //   console.log("REQ");
 //   next();
 // });
 
+=======
+>>>>>>> d54e186260649610a2e96b8a785556be15f2a18d
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors());

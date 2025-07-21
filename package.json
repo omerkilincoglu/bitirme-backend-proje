@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon"
+    "dev": "nodemon",
+    "postinstall": "prisma generate"
   },
   "repository": {
     "type": "git",
